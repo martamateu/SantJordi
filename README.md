@@ -1,4 +1,4 @@
-# SantJordi: La Leyenda de Victor
+# Más Allá del Dragón
 
 RPG narrativo en React con estética retro CRT y estilo pixel-art moderno.
 
