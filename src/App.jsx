@@ -138,7 +138,7 @@ function App() {
     <main className="game-shell">
       <header>
         <p className="kicker">RPG narrativo retro CRT</p>
-        <h1>Sant Jordi: La Leyenda de Victor</h1>
+        <h1>Más Allá del Dragón</h1>
         <p className="subtitle">
           Inspirado en Final Fantasy, The Legend of Zelda y Baldur&apos;s Gate.
         </p>
