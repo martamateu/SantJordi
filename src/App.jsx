@@ -66,10 +66,8 @@ function startMusic(ac) {
 
   sched()
   const id = setInterval(sched, 1000)
-  return { stop: () => clearInterval(id), master }
-}
-
-// ── 8-bit win/credits music — epic march ─────────────────
+  return { stop: () => { clearInterval(id); master.disconnect() }, master }
+} — epic march ─────────────────
 function startWinMusic(ac) {
   const master = ac.createGain()
   master.gain.value = 0.8
@@ -136,7 +134,7 @@ function startWinMusic(ac) {
 
   sched()
   const id = setInterval(sched, 1000)
-  return { stop: () => clearInterval(id), master }
+  return { stop: () => { clearInterval(id); master.disconnect() }, master }
 }
 
 
@@ -380,7 +378,8 @@ function addParticles(particles, x, y, color) {
 
 // ── App ───────────────────────────────────────────────────
 export default function App() {
-  const canvasRef   = useRef(null)
+  const canvasRef        = useRef(null)
+  const creditsScrollRef = useRef(null)
   const stateRef    = useRef(mkState())
   const keysRef     = useRef({})
   const touchRef    = useRef({ left: false, right: false, jump: false, attack: false })
@@ -438,6 +437,8 @@ export default function App() {
     if (!overlayRef.current) {
       pauseRef.current = !pauseRef.current
       setPaused(pauseRef.current)
+      if (creditsScrollRef.current)
+        creditsScrollRef.current.style.animationPlayState = pauseRef.current ? 'paused' : 'running'
     }
   }, [])
 
@@ -481,10 +482,11 @@ export default function App() {
     const onKeyDown = (e) => {
       keysRef.current[e.code] = true
       if ((e.code === 'KeyP' || e.code === 'Escape') && !stateRef.current.dead) {
-        const s = stateRef.current
         if (!overlayRef.current) {
           pauseRef.current = !pauseRef.current
           setPaused(pauseRef.current)
+          if (creditsScrollRef.current)
+            creditsScrollRef.current.style.animationPlayState = pauseRef.current ? 'paused' : 'running'
         }
       }
       if (e.code === 'KeyR' && stateRef.current.dead) {
@@ -548,7 +550,7 @@ export default function App() {
           s.px = 60; s.py = GROUND; s.pvx = 0; s.pvy = 0; s.camX = 0
           s.roses = 0
           s.marta = next === 4 ? { x: ZONES[4].len - 80, y: GROUND, f: 0, met: false }
-                  : next === 5 ? { x: 120, y: GROUND, f: 0, met: false }
+                  : next === 5 ? { x: 430, y: GROUND, f: 0, met: false }
                   : null
           showOverlay({ zone: next, text: DIALOGS[next] })
           return
@@ -927,7 +929,7 @@ export default function App() {
 
         {showCredits && (
           <div className="credits-overlay" onClick={restart}>
-            <div className="credits-scroll" style={{ animationPlayState: paused ? 'paused' : 'running' }}>
+            <div className="credits-scroll" ref={creditsScrollRef}>
               <div className="credits-title">Más Allá del Dragón</div>
               <div className="credits-subtitle">Sant Jordi — 23 de abril de 2026, Barcelona</div>
 
