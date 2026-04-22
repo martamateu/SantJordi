@@ -237,9 +237,9 @@ body {
 }
 .tbtn-pause,
 .tbtn-util {
-  width: 36px;
+  width: 40px;
   height: 40px;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   border-color: #c8a040;
   opacity: 0.75;
 }
@@ -285,7 +285,7 @@ body {
   .touch-utils { flex-direction: column; gap: 0.25rem; }
   .tbtn        { width: 66px; height: 56px; font-size: 1.35rem; }
   .tbtn-pause,
-  .tbtn-util   { width: 54px; height: 34px; font-size: 0.9rem; opacity: 0.85; }
+  .tbtn-util   { width: 54px; height: 40px; font-size: 1rem; opacity: 0.85; }
 }
 
 /* Hide touch controls on non-touch desktop */

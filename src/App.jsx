@@ -69,29 +69,27 @@ function startMusic(ac) {
   return { stop: () => clearInterval(id), master }
 }
 
-// ── 8-bit win/credits music ───────────────────────────────
+// ── 8-bit win/credits music — epic march ─────────────────
 function startWinMusic(ac) {
   const master = ac.createGain()
   master.gain.value = 0.8
   master.connect(ac.destination)
 
-  const B = 60 / 108   // D major triumphant, 108 BPM
+  const B = 60 / 104   // march tempo — Star Wars feel
 
+  // D major fanfare: "dun dun dun DUN-dun DUN..." march
   const MEL = [
-    [294,1],[370,1],[440,1],[587,1],
-    [587,1.5],[523,0.5],[440,1],[370,1],
-    [440,2],[370,1],[294,1],
-    [392,1],[523,1],[659,1],[784,1],
-    [784,1.5],[659,0.5],[587,1],[440,1],
-    [587,3],[0,1],
-    [440,1],[523,1],[587,1],[659,1],[784,1],[880,3],[0,1],
-    [587,1],[440,1],[370,1],[294,3],
+    [294,1],[294,1],[294,1.5],[440,0.5],[294,1.5],[440,0.5],[587,3],[0,1],
+    [523,1.5],[440,0.5],[392,1],[349,1],[294,3],[0,1],
+    [294,1],[294,1],[294,1.5],[440,0.5],[294,1.5],[587,0.5],[784,3],[0,1],
+    [659,1.5],[587,0.5],[523,1],[440,1],[294,4],
+    [440,1],[523,1],[587,1.5],[659,0.5],[784,2],[0,2],
+    [440,1],[784,1],[659,1],[587,1],[440,1],[294,4],
   ]
+  // Staccato march bass stabs
   const BAS = [
-    [147,2],[220,2],[110,2],[196,2],
-    [147,2],[165,2],[131,2],[110,2],
-    [147,2],[220,2],[147,2],[196,2],
-    [110,2],[147,2],[110,4],
+    [147,2],[196,2],[147,2],[220,2],
+    [196,2],[147,2],[110,2],[147,2],
   ]
   const LOOP = MEL.reduce((s, [,b]) => s + b, 0) * B
 
@@ -101,7 +99,7 @@ function startWinMusic(ac) {
     o.connect(g); g.connect(master)
     o.type = type; o.frequency.value = freq
     g.gain.setValueAtTime(vol, t)
-    g.gain.exponentialRampToValueAtTime(0.001, t + Math.max(dur * 0.85, 0.02))
+    g.gain.exponentialRampToValueAtTime(0.001, t + Math.max(dur * 0.82, 0.02))
     o.start(t); o.stop(t + dur + 0.02)
   }
 
@@ -114,21 +112,23 @@ function startWinMusic(ac) {
     const now = ac.currentTime
     while (mt < now + AHEAD) {
       for (const [f, b] of MEL) {
-        note(f,   b*B*0.85, mt, 'square',   0.07)
-        note(f/2, b*B*0.55, mt, 'triangle', 0.04)
+        note(f,   b*B*0.82, mt, 'square',   0.09)   // brass melody
+        note(f*2, b*B*0.45, mt, 'square',   0.03)   // octave shimmer
+        note(f/2, b*B*0.40, mt, 'triangle', 0.05)   // warm sub
         mt += b*B
       }
     }
     while (bt < now + AHEAD) {
       for (const [f, b] of BAS) {
-        note(f, b*B*0.70, bt, 'sawtooth', 0.08)
+        note(f, b*B*0.60, bt, 'sawtooth', 0.10)
         bt += b*B
       }
     }
     while (ht < now + AHEAD) {
-      const steps = Math.round(LOOP / (B / 2))
+      // March snare on beat 2 and 4
+      const steps = Math.round(LOOP / B)
       for (let i = 0; i < steps; i++) {
-        if (i % 2 === 0) note(880, 0.04, ht + i * (B / 2), 'square', 0.018)
+        if (i % 2 === 1) note(220, 0.07, ht + i * B, 'sawtooth', 0.022)
       }
       ht += LOOP
     }
@@ -395,10 +395,10 @@ export default function App() {
   const [isDead,  setIsDead]      = useState(false)
   const [paused,  setPaused]      = useState(false)
   const [showCredits, setShowCredits] = useState(false)
-  const [volIdx,  setVolIdx]      = useState(3)  // 0=mute 1=low 2=med 3=full
+  const [volIdx,  setVolIdx]      = useState(2)  // 0=mute 1=half 2=full
 
-  const VOL_VALS  = [0, 0.25, 0.55, 1.0]
-  const VOL_ICONS = ['🔇', '🔈', '🔉', '🔊']
+  const VOL_VALS  = [0, 0.4, 1.0]
+  const VOL_ICONS = ['🔇', '🔉', '🔊']
 
   const showOverlay = useCallback((data) => {
     overlayRef.current = !!data
@@ -437,13 +437,15 @@ export default function App() {
 
   const togglePause = useCallback(() => {
     const s = stateRef.current
-    if (s.won || s.dead || overlayRef.current) return
-    pauseRef.current = !pauseRef.current
-    setPaused(pauseRef.current)
-    // Suspend / resume AudioContext
+    if (s.dead) return
+    // During gameplay: toggle pause overlay; during credits: audio-only toggle
+    if (!s.won && !overlayRef.current) {
+      pauseRef.current = !pauseRef.current
+      setPaused(pauseRef.current)
+    }
     if (audioRef.current) {
-      if (pauseRef.current) audioRef.current.suspend()
-      else                  audioRef.current.resume()
+      if (audioRef.current.state === 'running') audioRef.current.suspend()
+      else                                       audioRef.current.resume()
     }
   }, [])
 
@@ -457,8 +459,8 @@ export default function App() {
 
   const toggleVolume = useCallback(() => {
     setVolIdx(prev => {
-      const next = (prev + 1) % 4
-      if (musicStopRef.current) musicStopRef.current.master.gain.value = [0, 0.25, 0.55, 1.0][next]
+      const next = (prev + 1) % 3
+      if (musicStopRef.current) musicStopRef.current.master.gain.value = [0, 0.4, 1.0][next]
       return next
     })
   }, [])
@@ -473,9 +475,12 @@ export default function App() {
     s.ebResistance = false
     if (enm.hp <= 0) {
       s.won = true
-      // Switch to win music
+      // Close game music completely (clears pre-scheduled notes), start win music fresh
       if (musicStopRef.current) { musicStopRef.current.stop(); musicStopRef.current = null }
-      if (audioRef.current) musicStopRef.current = startWinMusic(audioRef.current)
+      if (audioRef.current) { audioRef.current.close(); audioRef.current = null }
+      const winAc = new (window.AudioContext || window.webkitAudioContext)()
+      audioRef.current = winAc
+      musicStopRef.current = startWinMusic(winAc)
       setTimeout(() => setShowCredits(true), 800)
     }
     setEbUI(u => ({ ...u, ebHp: enm.hp, mp: s.mp, resistance: false }))
@@ -502,10 +507,10 @@ export default function App() {
         if (!s.won && !overlayRef.current) {
           pauseRef.current = !pauseRef.current
           setPaused(pauseRef.current)
-          if (audioRef.current) {
-            if (pauseRef.current) audioRef.current.suspend()
-            else                  audioRef.current.resume()
-          }
+        }
+        if (audioRef.current) {
+          if (audioRef.current.state === 'running') audioRef.current.suspend()
+          else                                       audioRef.current.resume()
         }
       }
       if (e.code === 'KeyR' && stateRef.current.dead) {
@@ -1028,7 +1033,6 @@ export default function App() {
           <button className="tbtn tbtn-util" onClick={restart}>↺</button>
           <button className="tbtn tbtn-pause" onClick={togglePause}>{paused ? '▶' : '⏸'}</button>
           <button className="tbtn tbtn-util" onClick={toggleVolume}>{VOL_ICONS[volIdx]}</button>
-          <button className="tbtn tbtn-util" onClick={toggleFullscreen}>⛶</button>
         </div>
         <div className="touch-btns">
           <button className="tbtn tbtn-jump"  onPointerDown={() => tb('jump',   true)} onPointerUp={() => tb('jump',   false)} onPointerLeave={() => tb('jump',   false)}>↑</button>
