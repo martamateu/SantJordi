@@ -246,16 +246,46 @@ body {
 .tbtn-pause:active,
 .tbtn-util:active  { opacity: 1; }
 
-/* Landscape mobile: shrink everything so canvas + controls fit in 100dvh */
-@media (orientation: landscape) and (max-height: 500px) {
-  .canvas-wrap    { max-width: min(100vw, calc((100dvh - 62px) * 16 / 9)); }
-  .touch-controls {
-    max-width: min(100vw, calc((100dvh - 62px) * 16 / 9));
-    padding: 0.15rem 0.5rem;
+/* ── Landscape: side-by-side layout ─────────────────
+   Canvas fills height on the left, controls column on the right */
+@media (orientation: landscape) {
+  .game-root {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
   }
-  .tbtn           { width: 50px; height: 50px; font-size: 1.15rem; }
+  .canvas-wrap {
+    height: 100dvh;
+    width: auto;
+    max-width: min(calc(100dvw - 86px), calc(100dvh * 16 / 9));
+    aspect-ratio: 16 / 9;
+    align-self: center;
+    flex-shrink: 1;
+  }
+  .eb-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 86px;
+    width: auto;
+    max-width: none;
+  }
+  .touch-controls {
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    width: 86px;
+    min-width: 86px;
+    height: 100dvh;
+    max-width: 86px;
+    padding: 0.4rem 0.25rem;
+  }
+  .touch-dpad  { flex-direction: column; gap: 0.25rem; }
+  .touch-btns  { flex-direction: column; gap: 0.25rem; }
+  .touch-utils { flex-direction: column; gap: 0.25rem; }
+  .tbtn        { width: 66px; height: 56px; font-size: 1.35rem; }
   .tbtn-pause,
-  .tbtn-util      { width: 32px; height: 32px; font-size: 0.8rem; }
+  .tbtn-util   { width: 54px; height: 40px; font-size: 1rem; opacity: 0.85; }
 }
 
 /* Hide touch controls on non-touch desktop */
