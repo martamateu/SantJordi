@@ -3,30 +3,35 @@ import './App.css'
 
 // ── 8-bit music ───────────────────────────────────────────
 function startMusic(ac) {
-  const B = 60 / 85   // beat at 85 BPM
+  const B = 60 / 76   // beat at 76 BPM — slower, more melancholic
 
-  // A natural minor — melancholic, Sufjan-esque arpeggios
+  // D natural minor — sparse, emotional; 0 = silence
   const MEL = [
-    [440,2],[523,1],[659,1],[587,1.5],[523,0.5],[494,1],[440,3],   // 10 beats
-    [392,1],[440,1],[523,2],[494,1  ],[392,1  ],[440,1],[440,3],   // 10 beats
-    [659,1],[587,1],[523,1.5],[494,0.5],[440,1],[392,1],[349,1],[330,3], // 10 beats
-    [440,.5],[523,.5],[659,1],[784,1],[659,1],[587,1],[523,1.5],[440,3.5], // 10 beats
+    [294,3],[0,1],[349,1.5],[392,0.5],[440,2],[0,2],
+    [523,2],[494,1],[440,1],[392,3],[0,1],
+    [349,2],[294,1],[0,1],[262,2],[294,4],[0,2],
+    [440,1.5],[0,0.5],[523,1.5],[0,0.5],[587,2],[0,1],[523,1],[494,1],[440,3],[0,1],
+    [392,2],[349,1],[0,1],[294,2],[262,2],[294,4],[0,2],
+    [440,1],[523,1],[587,2],[523,1],[494,1],[440,2],[392,1],[349,4],[0,2],
   ]
-  // Angular bass — Strokes groove in A minor
+  // Angular Strokes-style bass in D minor
   const BAS = [
-    [110,1],[110,1],[165,1],[ 98,1],[110,1],[110,1],[131,1],[ 98,1],[110,1],[110,1],
-    [ 87,1],[ 87,1],[131,1],[ 87,1],[ 98,1],[ 98,1],[147,1],[ 98,1],[110,1],[110,1],
-    [110,1],[131,1],[165,1],[110,1],[ 87,1],[ 87,1],[ 98,1],[ 98,1],[110,1],[110,1],
-    [165,1],[165,1],[123,1],[165,1],[110,1],[110,1],[165,1],[220,1],[110,2],
+    [147,1],[147,0.5],[220,0.5],[196,1],[147,1],[131,1],
+    [131,1],[175,1],[147,1],[110,2],[110,1],
+    [147,1],[131,0.5],[110,0.5],[98,1],[110,1],[131,1],
+    [147,1],[196,1],[220,1],[175,0.5],[147,0.5],[131,1],[110,2],
+    [147,1],[147,0.5],[220,0.5],[196,1],[175,1],[147,1],
+    [131,1],[131,1],[147,1],[175,1],[196,2],[147,2],
   ]
-  const LOOP = MEL.reduce((s, [,b]) => s + b, 0) * B  // ~23.8s
+  const LOOP = MEL.reduce((s, [,b]) => s + b, 0) * B
 
   function note(freq, dur, t, type, vol) {
+    if (freq <= 0) return
     const o = ac.createOscillator(), g = ac.createGain()
     o.connect(g); g.connect(ac.destination)
     o.type = type; o.frequency.value = freq
     g.gain.setValueAtTime(vol, t)
-    g.gain.exponentialRampToValueAtTime(0.001, t + Math.max(dur * 0.85, 0.02))
+    g.gain.exponentialRampToValueAtTime(0.001, t + Math.max(dur * 0.78, 0.02))
     o.start(t); o.stop(t + dur + 0.02)
   }
 
@@ -39,22 +44,23 @@ function startMusic(ac) {
     const now = ac.currentTime
     while (mt < now + AHEAD) {
       for (const [f, b] of MEL) {
-        note(f,   b*B*0.80, mt, 'square',   0.08)
-        note(f/2, b*B*0.50, mt, 'sine',     0.03)  // warm sub-octave
+        note(f,   b*B*0.75, mt, 'square',   0.07)   // lead
+        note(f/2, b*B*0.55, mt, 'triangle', 0.04)   // warm sub
         mt += b*B
       }
     }
     while (bt < now + AHEAD) {
       for (const [f, b] of BAS) {
-        note(f, b*B*0.62, bt, 'sawtooth', 0.07)
+        note(f, b*B*0.60, bt, 'sawtooth', 0.065)
         bt += b*B
       }
     }
     while (ht < now + AHEAD) {
       const steps = Math.round(LOOP / (B / 2))
       for (let i = 0; i < steps; i++) {
-        if (i % 2 === 1)  // off-beat hi-hat
-          note(1050, 0.05, ht + i * (B / 2), 'square', 0.016)
+        // hi-hat only on beats 2 and 4 (every 2 half-beats, offset)
+        if (i % 4 === 2 || i % 4 === 3)
+          note(1200, 0.04, ht + i * (B / 2), 'square', 0.012)
       }
       ht += LOOP
     }
@@ -144,8 +150,14 @@ function drawVictor(ctx, x, y, dir, atk, inv, f, walking) {
   r(ctx,   2,   -7 + leg,  8,  2, '#5a2a10')   // boot shine R
   r(ctx,  -8,  -19 - leg,  7, 13, '#1a3a6c')   // left leg
   r(ctx,   2,  -19 + leg,  7, 13, '#1a3a6c')   // right leg
-  r(ctx,  -9,  -33, 18, 15, '#3a6bc7')          // torso
-  r(ctx,  -9,  -33, 18,  4, '#5a8be8')          // torso highlight
+  // Espanyol torso — blue/white vertical stripes
+  r(ctx,  -9,  -33,  3, 15, '#003DA5')          // stripe 1 blue
+  r(ctx,  -6,  -33,  3, 15, '#FFFFFF')          // stripe 2 white
+  r(ctx,  -3,  -33,  3, 15, '#003DA5')          // stripe 3 blue
+  r(ctx,   0,  -33,  3, 15, '#FFFFFF')          // stripe 4 white
+  r(ctx,   3,  -33,  3, 15, '#003DA5')          // stripe 5 blue
+  r(ctx,   6,  -33,  3, 15, '#FFFFFF')          // stripe 6 white
+  r(ctx,  -9,  -33, 18,  2, 'rgba(255,255,255,0.18)') // torso highlight
   r(ctx,  -9,  -19, 18,  3, '#1a0d3a')          // belt
   r(ctx,  -7,  -47, 14, 15, '#e8b88a')          // head
   r(ctx,  -7,  -47, 14,  5, '#3a2010')          // hair
@@ -276,10 +288,11 @@ export default function App() {
   const audioRef    = useRef(null)
   const musicStopRef= useRef(null)
 
-  const [overlay, setOverlay]   = useState({ zone: 0, text: DIALOGS[0] })
-  const [ebUI,    setEbUI]      = useState(null)
-  const [isDead,  setIsDead]    = useState(false)
-  const [paused,  setPaused]    = useState(false)
+  const [overlay, setOverlay]     = useState({ zone: 0, text: DIALOGS[0] })
+  const [ebUI,    setEbUI]        = useState(null)
+  const [isDead,  setIsDead]      = useState(false)
+  const [paused,  setPaused]      = useState(false)
+  const [showCredits, setShowCredits] = useState(false)
 
   const showOverlay = useCallback((data) => {
     overlayRef.current = !!data
@@ -288,9 +301,12 @@ export default function App() {
 
   const dismissDialog = useCallback(() => {
     const s = stateRef.current
-    if (s.won) return
     overlayRef.current = false
     setOverlay(null)
+    if (s.won) {
+      setShowCredits(true)
+      return
+    }
     // Start music on first user gesture
     if (!audioRef.current) {
       const ac = new (window.AudioContext || window.webkitAudioContext)()
@@ -306,9 +322,11 @@ export default function App() {
     setIsDead(false)
     setPaused(false)
     setEbUI(null)
+    setShowCredits(false)
     setOverlay({ zone: 0, text: DIALOGS[0] })
-    if (musicStopRef.current) musicStopRef.current()
-    if (audioRef.current) musicStopRef.current = startMusic(audioRef.current)
+    // Close old AudioContext cleanly — new one created lazily on next dialog dismiss
+    if (musicStopRef.current) { musicStopRef.current(); musicStopRef.current = null }
+    if (audioRef.current) { audioRef.current.close(); audioRef.current = null }
   }, [])
 
   const togglePause = useCallback(() => {
@@ -569,6 +587,36 @@ export default function App() {
         ctx.fillStyle = s.zone === 5 ? '#160850' : '#120840'
         ctx.beginPath(); ctx.arc(mx + 3, 19, 8, 0, Math.PI * 2); ctx.fill()
       }
+      // Sagrada Família silhouette (Zone 0 — Ciudad)
+      if (s.zone === 0) {
+        const sfX = ~~(CW * 0.62 - s.camX * 0.07)
+        const sfY = CH - 32
+        const c = '#1a0e2e'
+        // spires
+        r(ctx, sfX - 38, sfY - 26,  6, 26, c)
+        r(ctx, sfX - 36, sfY - 32,  2,  6, c)
+        r(ctx, sfX - 25, sfY - 36,  8, 36, c)
+        r(ctx, sfX - 23, sfY - 44,  4,  8, c)
+        r(ctx, sfX - 12, sfY - 48, 10, 48, c)
+        r(ctx, sfX - 10, sfY - 58,  6, 10, c)
+        r(ctx,  sfX,     sfY - 52, 10, 52, c)
+        r(ctx, sfX +  2, sfY - 62,  6, 10, c)
+        r(ctx, sfX + 12, sfY - 46,  8, 46, c)
+        r(ctx, sfX + 14, sfY - 56,  4, 10, c)
+        r(ctx, sfX + 22, sfY - 34,  8, 34, c)
+        r(ctx, sfX + 24, sfY - 42,  4,  8, c)
+        r(ctx, sfX + 32, sfY - 24,  6, 24, c)
+        // main facade
+        r(ctx, sfX - 40, sfY - 22, 84, 22, c)
+        // façade windows (holes punched in bg color)
+        const bgC = '#120840'
+        r(ctx, sfX - 30, sfY - 16,  6, 10, bgC)
+        r(ctx, sfX - 20, sfY - 18,  4,  8, bgC)
+        r(ctx, sfX -  8, sfY - 18,  8, 12, bgC)
+        r(ctx, sfX +  4, sfY - 18,  8, 12, bgC)
+        r(ctx, sfX + 16, sfY - 18,  4,  8, bgC)
+        r(ctx, sfX + 24, sfY - 16,  6, 10, bgC)
+      }
       // Trees (Forest / Garden)
       if (s.zone === 1 || s.zone === 4) {
         for (let i = 0; i < 7; i++) {
@@ -753,7 +801,7 @@ export default function App() {
             <div className="dialog-box">
               <div className="dialog-zone">{ZONES[overlay.zone]?.name}</div>
               <div className="dialog-text">{overlay.text}</div>
-              <div className="dialog-hint">{stateRef.current.won ? '🌹 Fin' : 'Toca para continuar'}</div>
+              <div className="dialog-hint">{stateRef.current.won ? '🌹 Toca para ver los créditos' : 'Toca para continuar'}</div>
             </div>
           </div>
         )}
@@ -763,6 +811,63 @@ export default function App() {
             <div className="dialog-box">
               <div className="dialog-zone" style={{ color: '#e35656' }}>Game Over</div>
               <div className="dialog-hint">Toca para reintentar</div>
+            </div>
+          </div>
+        )}
+
+        {showCredits && (
+          <div className="credits-overlay" onClick={restart}>
+            <div className="credits-scroll">
+              <div className="credits-title">Más Allá del Dragón</div>
+              <div className="credits-subtitle">Sant Jordi — 23 de abril, Barcelona</div>
+
+              <div className="credits-section">Dirección creativa</div>
+              <div className="credits-body">Una historia sobre el viaje hacia dentro.</div>
+
+              <div className="credits-section">Narrativa</div>
+              <div className="credits-body">
+                Un hombre sale a buscar a la persona que ama…{'\n'}
+                pero descubre que nunca estuvo realmente lejos.{'\n\n'}
+                El mayor obstáculo no era el camino,{'\n'}
+                ni el bosque, ni las ruinas,{'\n'}
+                ni siquiera el dragón.{'\n\n'}
+                Era su propio miedo.{'\n\n'}
+                El dragón no era un enemigo,{'\n'}
+                sino la forma que toma la ansiedad cuando no se mira de frente.{'\n\n'}
+                El elefante no guiaba el camino,{'\n'}
+                solo recordaba lo que ya estaba dentro:{'\n'}
+                la calma, la distancia, la comprensión.{'\n\n'}
+                Y Marta…{'\n'}
+                no era una meta lejana,{'\n'}
+                sino un amor que ya existía,{'\n'}
+                esperando a ser encontrado sin perderse a uno mismo.
+              </div>
+
+              <div className="credits-section">Diseño de personaje</div>
+              <div className="credits-body">
+                Víctor, con la camiseta del RCD Espanyol de Barcelona,{'\n'}
+                camina entre sombras y luz —{'\n'}
+                llevando consigo su historia, su identidad, su hogar.
+              </div>
+
+              <div className="credits-section">Música</div>
+              <div className="credits-body">
+                La música te acompaña, pero no es estática:{'\n'}
+                a veces vuelve al origen,{'\n'}
+                a veces cambia contigo.{'\n\n'}
+                Porque el viaje no siempre suena igual,{'\n'}
+                aunque el camino sea el mismo.
+              </div>
+
+              <div className="credits-section">Mensaje final</div>
+              <div className="credits-body">
+                No fue el valor lo que te trajo aquí.{'\n'}
+                Fue aprender a quererte sin dejar de querer.
+              </div>
+
+              <div className="credits-fin">🌹</div>
+              <div className="credits-thanks">Gracias por jugar.</div>
+              <div className="credits-hint">Toca para volver a empezar</div>
             </div>
           </div>
         )}

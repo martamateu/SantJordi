@@ -292,3 +292,82 @@ body {
 @media (hover: hover) and (pointer: fine) {
   .touch-controls { opacity: 0.5; }
 }
+
+/* ── Credits screen ──────────────────────────────── */
+.credits-overlay {
+  position: absolute;
+  inset: 0;
+  background: #04010e;
+  overflow: hidden;
+  cursor: pointer;
+  z-index: 20;
+}
+
+.credits-scroll {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  text-align: center;
+  padding: 0 2rem 6rem;
+  animation: creditsRoll 60s linear forwards;
+}
+
+@keyframes creditsRoll {
+  from { transform: translateY(0); }
+  to   { transform: translateY(calc(-100% - 100%)); }
+}
+
+.credits-title {
+  color: #f5d020;
+  font-size: 1.1rem;
+  font-weight: bold;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.3rem;
+  margin-top: 2rem;
+}
+
+.credits-subtitle {
+  color: #c8a040;
+  font-size: 0.55rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 2.5rem;
+}
+
+.credits-section {
+  color: #c8a040;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  margin-top: 2rem;
+  margin-bottom: 0.6rem;
+}
+
+.credits-body {
+  color: #d8d0f0;
+  font-size: 0.6rem;
+  line-height: 1.9;
+  white-space: pre-line;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.credits-fin {
+  font-size: 2rem;
+  margin-top: 2.5rem;
+}
+
+.credits-thanks {
+  color: #ff90b3;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  margin-top: 0.6rem;
+  margin-bottom: 3rem;
+}
+
+.credits-hint {
+  color: #4a3060;
+  font-size: 0.45rem;
+  letter-spacing: 0.1em;
+}
