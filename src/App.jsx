@@ -323,6 +323,13 @@ export default function App() {
     }
   }, [])
 
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {})
+    } else {
+      document.exitFullscreen().catch(() => {})
+    }
+  }, [])
   const attackElephant = useCallback(() => {
     const s = stateRef.current
     const enm = s.enemies.find(e => e.type === 'elephant')
@@ -791,7 +798,11 @@ export default function App() {
           <button className="tbtn" onPointerDown={() => tb('left',  true)} onPointerUp={() => tb('left',  false)} onPointerLeave={() => tb('left',  false)}>◀</button>
           <button className="tbtn" onPointerDown={() => tb('right', true)} onPointerUp={() => tb('right', false)} onPointerLeave={() => tb('right', false)}>▶</button>
         </div>
-        <button className="tbtn tbtn-pause" onClick={togglePause}>{paused ? '▶' : '⏸'}</button>
+        <div className="touch-utils">
+          <button className="tbtn tbtn-util" onClick={restart}>↺</button>
+          <button className="tbtn tbtn-pause" onClick={togglePause}>{paused ? '▶' : '⏸'}</button>
+          <button className="tbtn tbtn-util" onClick={toggleFullscreen}>⛶</button>
+        </div>
         <div className="touch-btns">
           <button className="tbtn tbtn-jump"  onPointerDown={() => tb('jump',   true)} onPointerUp={() => tb('jump',   false)} onPointerLeave={() => tb('jump',   false)}>↑</button>
           <button className="tbtn tbtn-atk"   onPointerDown={() => tb('attack', true)} onPointerUp={() => tb('attack', false)} onPointerLeave={() => tb('attack', false)}>⚔</button>
