@@ -181,7 +181,7 @@ function spawnZone(zone) {
     for (let i = 0; i < 5; i++)
       e.push({ type: 'rose', x: 120 + i * 100, y: GROUND - 6, got: false, f: 0 })
   } else if (zone === 5) {
-    e.push({ type: 'elephant', x: 190, y: GROUND, hp: 6, maxHp: 6, f: 0 })
+    e.push({ type: 'elephant', x: 380, y: GROUND, hp: 6, maxHp: 6, f: 0, inv: 0 })
   }
   return e
 }
@@ -190,11 +190,11 @@ function spawnZone(zone) {
 const mkState = () => ({
   px: 60, py: GROUND, pvx: 0, pvy: 0, onGround: true, facing: 1,
   atk: 0, atkcd: 0, inv: 0,
-  hp: 6, maxHp: 6, mp: 50, maxMp: 50, panic: 30,
+  hp: 6, maxHp: 6, mp: 0, maxMp: 50, panic: 30,
   camX: 0, zone: 0, roses: 0,
   enemies: spawnZone(0), particles: [],
   marta: null,
-  ebActive: false, ebResistance: false,
+  hasLance: false, ebShown: false,
   won: false, dead: false, f: 0,
 })
 
@@ -391,11 +391,11 @@ export default function App() {
   const musicStopRef= useRef(null)
 
   const [overlay, setOverlay]     = useState({ zone: 0, text: DIALOGS[0] })
-  const [ebUI,    setEbUI]        = useState(null)
   const [isDead,  setIsDead]      = useState(false)
   const [paused,  setPaused]      = useState(false)
   const [showCredits, setShowCredits] = useState(false)
   const [volIdx,  setVolIdx]      = useState(2)  // 0=mute 1=half 2=full
+  const [ebUI,    setEbUI]        = useState(null)
 
   const VOL_VALS  = [0, 0.4, 1.0]
   const VOL_ICONS = ['🔇', '🔉', '🔊']
@@ -427,8 +427,8 @@ export default function App() {
     stateRef.current = mkState()
     setIsDead(false)
     setPaused(false)
-    setEbUI(null)
     setShowCredits(false)
+    setEbUI(null)
     setOverlay({ zone: 0, text: DIALOGS[0] })
     // Close old AudioContext cleanly — new one created lazily on next dialog dismiss
     if (musicStopRef.current) { musicStopRef.current.stop(); musicStopRef.current = null }
@@ -464,36 +464,45 @@ export default function App() {
       return next
     })
   }, [])
+
   const attackElephant = useCallback(() => {
     const s = stateRef.current
-    const enm = s.enemies.find(e => e.type === 'elephant')
-    if (!enm || enm.hp <= 0) return
-    const hasLance = s.ebResistance
-    enm.hp = Math.max(0, enm.hp - (hasLance ? 3 : 1))
-    s.hp    = Math.max(0, s.hp   - (hasLance ? 0 : 2))
-    s.panic = Math.min(100, s.panic + (hasLance ? 0 : 10))
-    s.ebResistance = false
-    if (enm.hp <= 0) {
+    const eb = s.enemies.find(e => e.type === 'elephant' && e.hp > 0)
+    if (!eb) return
+    const dmg = s.hasLance ? 2 : 1
+    eb.hp = Math.max(0, eb.hp - dmg)
+    addParticles(s.particles, eb.x, eb.y - 30, s.hasLance ? '#f5d020' : '#9b56e3')
+    if (eb.hp <= 0) {
+      // Win!
       s.won = true
-      // Close game music completely (clears pre-scheduled notes), start win music fresh
+      s.hasLance = false
+      setEbUI(null)
       if (musicStopRef.current) { musicStopRef.current.stop(); musicStopRef.current = null }
-      if (audioRef.current) { audioRef.current.close(); audioRef.current = null }
-      const winAc = new (window.AudioContext || window.webkitAudioContext)()
-      audioRef.current = winAc
-      musicStopRef.current = startWinMusic(winAc)
-      setTimeout(() => setShowCredits(true), 800)
+      if (audioRef.current) {
+        musicStopRef.current = startWinMusic(audioRef.current)
+        if (musicStopRef.current)
+          musicStopRef.current.master.gain.value = VOL_VALS[volIdx]
+      }
+      showOverlay({ zone: 5, text: DIALOGS[5] })
+    } else {
+      // Elephant counter-attacks
+      s.hp = Math.max(0, s.hp - 1)
+      s.panic = Math.min(100, s.panic + 8)
+      s.inv = 50
+      s.hasLance = false
+      const mp = s.mp
+      setEbUI({ ebHp: eb.hp, total: eb.maxHp, mp, resistance: false })
     }
-    setEbUI(u => ({ ...u, ebHp: enm.hp, mp: s.mp, resistance: false }))
-  }, [])
+  }, [showOverlay, volIdx])
 
   const rememberMarta = useCallback(() => {
     const s = stateRef.current
-    if (s.mp < 10) return
+    const eb = s.enemies.find(e => e.type === 'elephant' && e.hp > 0)
+    if (!eb || s.mp < 10) return
     s.mp -= 10
-    s.ebResistance = true   // Marta gives Victor her lance
-    setEbUI(u => ({ ...u, mp: s.mp, resistance: true }))
+    s.hasLance = true
+    setEbUI({ ebHp: eb.hp, total: eb.maxHp, mp: s.mp, resistance: true })
   }, [])
-
   useEffect(() => {
     const canvas = canvasRef.current
     const ctx    = canvas.getContext('2d')
@@ -535,16 +544,6 @@ export default function App() {
 
       if (s.won || s.dead || overlayRef.current || pauseRef.current) return
 
-      // Elephant boss uses React UI — freeze platformer controls
-      const elboss = s.enemies.find(e => e.type === 'elephant')
-      if (elboss) {
-        if (!s.ebActive) {
-          s.ebActive = true
-          setEbUI({ total: elboss.maxHp, ebHp: elboss.hp, mp: s.mp, resistance: false })
-        }
-        return
-      }
-
       // ── Input ─────────────────────────────────────────
       const left   = k.ArrowLeft || k.KeyA || t.left
       const right  = k.ArrowRight || k.KeyD || t.right
@@ -583,11 +582,10 @@ export default function App() {
           s.zone = next
           s.enemies = spawnZone(next)
           s.px = 60; s.py = GROUND; s.pvx = 0; s.pvy = 0; s.camX = 0
-          s.roses = 0; s.ebActive = false; s.ebResistance = false
+          s.roses = 0; s.hasLance = false; s.ebShown = false
           s.marta = next === 4 ? { x: ZONES[4].len - 80, y: GROUND, f: 0, met: false }
-                  : next === 5 ? { x: 300, y: GROUND, f: 0, met: false }
+                  : next === 5 ? { x: 120, y: GROUND, f: 0, met: false }
                   : null
-          setEbUI(null)
           showOverlay({ zone: next, text: DIALOGS[next] })
           return
         }
@@ -647,7 +645,47 @@ export default function App() {
             s.hp = Math.max(0, s.hp - 1); s.panic = Math.min(100, s.panic + 10)
             s.inv = 70; s.pvx = (s.px > e.x ? 1 : -1) * 4; s.pvy = -4
           }
-        } else if (e.type === 'rose') {
+        } else if (e.type === 'elephant') {
+          if (e.inv > 0) e.inv--
+          const dx = s.px - e.x
+          if (e.hp > 0) {
+            // Drift slowly toward player
+            if (Math.abs(dx) > 60) e.x += dx > 0 ? 0.5 : -0.5
+            // Reveal eb panel when player gets close (only once per approach)
+            if (!s.ebShown && Math.abs(dx) < 120) {
+              s.ebShown = true
+              setEbUI({ ebHp: e.hp, total: e.maxHp, mp: s.mp, resistance: s.hasLance })
+            }
+            // Direct sword hit (canvas-based attack also works)
+            if (s.atk > 0 && e.inv <= 0) {
+              const inRange = Math.abs(s.px - e.x) < 44 && Math.abs(s.py - e.y) < 56
+              const correct = (s.facing === 1 && e.x > s.px - 12) || (s.facing === -1 && e.x < s.px + 12)
+              if (inRange && correct) {
+                const dmg = s.hasLance ? 2 : 1
+                e.hp = Math.max(0, e.hp - dmg)
+                e.inv = 35
+                addParticles(s.particles, e.x, e.y - 30, s.hasLance ? '#f5d020' : '#9b56e3')
+                s.hasLance = false
+                if (e.hp <= 0) {
+                  s.won = true
+                  setEbUI(null)
+                  if (musicStopRef.current) { musicStopRef.current.stop(); musicStopRef.current = null }
+                  const newMusic = startWinMusic(audioRef.current)
+                  musicStopRef.current = newMusic
+                  if (newMusic) newMusic.master.gain.value = VOL_VALS[volIdx]
+                  showOverlay({ zone: 5, text: DIALOGS[5] })
+                } else {
+                  setEbUI({ ebHp: e.hp, total: e.maxHp, mp: s.mp, resistance: false })
+                }
+              }
+            }
+            // Body collision damage
+            if (s.inv <= 0 && Math.abs(s.px - e.x) < 24 && s.py > e.y - 40) {
+              s.hp = Math.max(0, s.hp - 1); s.panic = Math.min(100, s.panic + 10)
+              s.inv = 70; s.pvx = (s.px > e.x ? 1 : -1) * 4; s.pvy = -4
+            }
+          }
+        }
           if (!e.got && Math.abs(s.px - e.x) < 16 && Math.abs(s.py - e.y) < 20) {
             e.got = true; s.roses++
             s.mp = Math.min(s.maxMp, s.mp + 7)
