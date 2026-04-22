@@ -245,15 +245,33 @@ function drawRose(ctx, x, y) {
 function drawMarta(ctx, x, y, f) {
   ctx.save()
   ctx.translate(~~x + 6, ~~y)
+  ctx.scale(1, 0.82)                             // shorter than Victor
   r(ctx, -11, -50, 22, 53, '#000000')           // outline backdrop
   r(ctx,  -9,   -1, 18,  3, 'rgba(0,0,0,0.3)') // shadow
   r(ctx, -10,  -16, 20, 16, '#c0305a')          // skirt
   r(ctx, -13,   -8, 26,  9, '#e0406a')          // skirt flare
   r(ctx, -10,  -16, 20,  3, '#e05070')          // skirt highlight
+  // Floral motifs on skirt
+  r(ctx,  -7, -13,  2,  1, '#ff90b3')           // rose 1 top petal
+  r(ctx,  -7, -11,  2,  1, '#ff90b3')           // rose 1 bottom petal
+  r(ctx,  -8, -12,  1,  2, '#ff90b3')           // rose 1 left petal
+  r(ctx,  -5, -12,  1,  2, '#ff90b3')           // rose 1 right petal
+  r(ctx,  -7, -12,  2,  2, '#ffe090')           // rose 1 center
+  r(ctx,  -4,  -9,  2,  1, '#4a9a30')           // leaf 1
+  r(ctx,   2, -13,  2,  1, '#ff90b3')           // rose 2 top petal
+  r(ctx,   2, -11,  2,  1, '#ff90b3')           // rose 2 bottom petal
+  r(ctx,   1, -12,  1,  2, '#ff90b3')           // rose 2 left petal
+  r(ctx,   4, -12,  1,  2, '#ff90b3')           // rose 2 right petal
+  r(ctx,   2, -12,  2,  2, '#ffe090')           // rose 2 center
+  r(ctx,   1,  -9,  2,  1, '#4a9a30')           // leaf 2
+  r(ctx,  -3,  -7,  2,  1, '#ff90b3')           // small bud top
+  r(ctx,  -3,  -5,  2,  1, '#ff90b3')           // small bud bottom
+  r(ctx,  -3,  -6,  2,  2, '#ffa0c8')           // small bud center
   r(ctx,  -5,  -27, 10, 12, '#e8b88a')          // torso
-  r(ctx,  -7,  -43, 14,  8, '#1a0808')          // hair top
-  r(ctx,  -8,  -35,  4, 19, '#1a0808')          // hair left
-  r(ctx,   5,  -35,  4, 19, '#1a0808')          // hair right
+  r(ctx,  -7,  -43, 14,  8, '#e8c050')          // hair top (blonde)
+  r(ctx,  -8,  -35,  4, 19, '#e8c050')          // hair left
+  r(ctx,   5,  -35,  4, 19, '#d4a830')          // hair right (shade)
+  r(ctx,  -2,  -49,  4,  3, '#f5d848')          // blonde wisp
   r(ctx,  -5,  -39, 10, 13, '#e8b88a')          // face
   r(ctx,  -3,  -35,  3,  3, '#1a1a2e')          // left eye
   r(ctx,   2,  -35,  3,  3, '#1a1a2e')          // right eye
