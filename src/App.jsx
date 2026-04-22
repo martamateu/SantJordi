@@ -1000,6 +1000,7 @@ export default function App() {
         </div>
         <div className="touch-utils">
           <button className="tbtn tbtn-util" onClick={restart}>↺</button>
+          <button className="tbtn tbtn-util" onClick={toggleFullscreen}>⛶</button>
           <button className="tbtn tbtn-pause" onClick={togglePause}>{paused ? '▶' : '⏸'}</button>
           <button className="tbtn tbtn-util" onClick={toggleVolume}>{VOL_ICONS[volIdx]}</button>
         </div>
