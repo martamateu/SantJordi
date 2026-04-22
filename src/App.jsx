@@ -3,35 +3,34 @@ import './App.css'
 
 // ── 8-bit music ───────────────────────────────────────────
 function startMusic(ac) {
-  const B = 60 / 76   // beat at 76 BPM — slower, more melancholic
+  const master = ac.createGain()
+  master.gain.value = 0.8
+  master.connect(ac.destination)
 
-  // D natural minor — sparse, emotional; 0 = silence
+  const B = 60 / 85   // beat at 85 BPM
+
+  // A natural minor — melancholic, Sufjan-esque arpeggios
   const MEL = [
-    [294,3],[0,1],[349,1.5],[392,0.5],[440,2],[0,2],
-    [523,2],[494,1],[440,1],[392,3],[0,1],
-    [349,2],[294,1],[0,1],[262,2],[294,4],[0,2],
-    [440,1.5],[0,0.5],[523,1.5],[0,0.5],[587,2],[0,1],[523,1],[494,1],[440,3],[0,1],
-    [392,2],[349,1],[0,1],[294,2],[262,2],[294,4],[0,2],
-    [440,1],[523,1],[587,2],[523,1],[494,1],[440,2],[392,1],[349,4],[0,2],
+    [440,2],[523,1],[659,1],[587,1.5],[523,0.5],[494,1],[440,3],
+    [392,1],[440,1],[523,2],[494,1  ],[392,1  ],[440,1],[440,3],
+    [659,1],[587,1],[523,1.5],[494,0.5],[440,1],[392,1],[349,1],[330,3],
+    [440,.5],[523,.5],[659,1],[784,1],[659,1],[587,1],[523,1.5],[440,3.5],
   ]
-  // Angular Strokes-style bass in D minor
+  // Angular bass — Strokes groove in A minor
   const BAS = [
-    [147,1],[147,0.5],[220,0.5],[196,1],[147,1],[131,1],
-    [131,1],[175,1],[147,1],[110,2],[110,1],
-    [147,1],[131,0.5],[110,0.5],[98,1],[110,1],[131,1],
-    [147,1],[196,1],[220,1],[175,0.5],[147,0.5],[131,1],[110,2],
-    [147,1],[147,0.5],[220,0.5],[196,1],[175,1],[147,1],
-    [131,1],[131,1],[147,1],[175,1],[196,2],[147,2],
+    [110,1],[110,1],[165,1],[ 98,1],[110,1],[110,1],[131,1],[ 98,1],[110,1],[110,1],
+    [ 87,1],[ 87,1],[131,1],[ 87,1],[ 98,1],[ 98,1],[147,1],[ 98,1],[110,1],[110,1],
+    [110,1],[131,1],[165,1],[110,1],[ 87,1],[ 87,1],[ 98,1],[ 98,1],[110,1],[110,1],
+    [165,1],[165,1],[123,1],[165,1],[110,1],[110,1],[165,1],[220,1],[110,2],
   ]
   const LOOP = MEL.reduce((s, [,b]) => s + b, 0) * B
 
   function note(freq, dur, t, type, vol) {
-    if (freq <= 0) return
     const o = ac.createOscillator(), g = ac.createGain()
-    o.connect(g); g.connect(ac.destination)
+    o.connect(g); g.connect(master)
     o.type = type; o.frequency.value = freq
     g.gain.setValueAtTime(vol, t)
-    g.gain.exponentialRampToValueAtTime(0.001, t + Math.max(dur * 0.78, 0.02))
+    g.gain.exponentialRampToValueAtTime(0.001, t + Math.max(dur * 0.85, 0.02))
     o.start(t); o.stop(t + dur + 0.02)
   }
 
@@ -44,23 +43,22 @@ function startMusic(ac) {
     const now = ac.currentTime
     while (mt < now + AHEAD) {
       for (const [f, b] of MEL) {
-        note(f,   b*B*0.75, mt, 'square',   0.07)   // lead
-        note(f/2, b*B*0.55, mt, 'triangle', 0.04)   // warm sub
+        note(f,   b*B*0.80, mt, 'square',   0.08)
+        note(f/2, b*B*0.50, mt, 'sine',     0.03)  // warm sub-octave
         mt += b*B
       }
     }
     while (bt < now + AHEAD) {
       for (const [f, b] of BAS) {
-        note(f, b*B*0.60, bt, 'sawtooth', 0.065)
+        note(f, b*B*0.62, bt, 'sawtooth', 0.07)
         bt += b*B
       }
     }
     while (ht < now + AHEAD) {
       const steps = Math.round(LOOP / (B / 2))
       for (let i = 0; i < steps; i++) {
-        // hi-hat only on beats 2 and 4 (every 2 half-beats, offset)
-        if (i % 4 === 2 || i % 4 === 3)
-          note(1200, 0.04, ht + i * (B / 2), 'square', 0.012)
+        if (i % 2 === 1)  // off-beat hi-hat
+          note(1050, 0.05, ht + i * (B / 2), 'square', 0.016)
       }
       ht += LOOP
     }
@@ -68,7 +66,7 @@ function startMusic(ac) {
 
   sched()
   const id = setInterval(sched, 1000)
-  return () => clearInterval(id)
+  return { stop: () => clearInterval(id), master }
 }
 
 // Logical game size (all coordinates use this)
@@ -293,6 +291,10 @@ export default function App() {
   const [isDead,  setIsDead]      = useState(false)
   const [paused,  setPaused]      = useState(false)
   const [showCredits, setShowCredits] = useState(false)
+  const [volIdx,  setVolIdx]      = useState(3)  // 0=mute 1=low 2=med 3=full
+
+  const VOL_VALS  = [0, 0.25, 0.55, 1.0]
+  const VOL_ICONS = ['🔇', '🔈', '🔉', '🔊']
 
   const showOverlay = useCallback((data) => {
     overlayRef.current = !!data
@@ -325,7 +327,7 @@ export default function App() {
     setShowCredits(false)
     setOverlay({ zone: 0, text: DIALOGS[0] })
     // Close old AudioContext cleanly — new one created lazily on next dialog dismiss
-    if (musicStopRef.current) { musicStopRef.current(); musicStopRef.current = null }
+    if (musicStopRef.current) { musicStopRef.current.stop(); musicStopRef.current = null }
     if (audioRef.current) { audioRef.current.close(); audioRef.current = null }
   }, [])
 
@@ -347,6 +349,14 @@ export default function App() {
     } else {
       document.exitFullscreen().catch(() => {})
     }
+  }, [])
+
+  const toggleVolume = useCallback(() => {
+    setVolIdx(prev => {
+      const next = (prev + 1) % 4
+      if (musicStopRef.current) musicStopRef.current.master.gain.value = [0, 0.25, 0.55, 1.0][next]
+      return next
+    })
   }, [])
   const attackElephant = useCallback(() => {
     const s = stateRef.current
@@ -704,15 +714,20 @@ export default function App() {
       ctx.font = '6px monospace'
       r(ctx, 4,  4, 62,  8, '#1a0d2e')
       r(ctx, 5,  5, ~~(60 * s.hp / s.maxHp), 6, s.hp <= 2 ? '#e35656' : '#56e356')
-      ctx.fillStyle = '#fff'; ctx.fillText('HP', 5, 12)
+      ctx.fillStyle = '#fff'; ctx.fillText('VIDA', 5, 12)
 
       r(ctx, 4, 14, 62,  8, '#1a0d2e')
       r(ctx, 5, 15, ~~(60 * s.mp / s.maxMp), 6, '#5684e3')
-      ctx.fillStyle = '#fff'; ctx.fillText('MP', 5, 22)
+      ctx.fillStyle = '#fff'; ctx.fillText('MEM.', 5, 22)
 
       r(ctx, 4, 24, 62,  8, '#1a0d2e')
       r(ctx, 5, 25, ~~(60 * s.panic / 100), 6, s.panic > 60 ? '#e35656' : '#e3a056')
-      ctx.fillStyle = '#fff'; ctx.fillText('PAN', 5, 32)
+      ctx.fillStyle = '#fff'; ctx.fillText('MIEDO', 5, 32)
+
+      // Bar legend
+      ctx.fillStyle = '#ffffff40'; ctx.font = '5px monospace'
+      ctx.fillText('vida · memoria · miedo', 4, 40)
+      ctx.font = '6px monospace'
 
       ctx.fillStyle = '#ffffff88'; ctx.textAlign = 'right'
       ctx.fillText(z.name.toUpperCase(), CW - 4, 12)
@@ -906,6 +921,7 @@ export default function App() {
         <div className="touch-utils">
           <button className="tbtn tbtn-util" onClick={restart}>↺</button>
           <button className="tbtn tbtn-pause" onClick={togglePause}>{paused ? '▶' : '⏸'}</button>
+          <button className="tbtn tbtn-util" onClick={toggleVolume}>{VOL_ICONS[volIdx]}</button>
           <button className="tbtn tbtn-util" onClick={toggleFullscreen}>⛶</button>
         </div>
         <div className="touch-btns">
