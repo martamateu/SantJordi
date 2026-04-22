@@ -190,11 +190,10 @@ function spawnZone(zone) {
 const mkState = () => ({
   px: 60, py: GROUND, pvx: 0, pvy: 0, onGround: true, facing: 1,
   atk: 0, atkcd: 0, inv: 0,
-  hp: 6, maxHp: 6, mp: 0, maxMp: 50, panic: 30,
+  hp: 6, maxHp: 6, panic: 30,
   camX: 0, zone: 0, roses: 0,
   enemies: spawnZone(0), particles: [],
   marta: null,
-  hasLance: false, ebShown: false,
   won: false, dead: false, f: 0,
 })
 
@@ -395,7 +394,6 @@ export default function App() {
   const [paused,  setPaused]      = useState(false)
   const [showCredits, setShowCredits] = useState(false)
   const [volIdx,  setVolIdx]      = useState(2)  // 0=mute 1=half 2=full
-  const [ebUI,    setEbUI]        = useState(null)
 
   const VOL_VALS  = [0, 0.4, 1.0]
   const VOL_ICONS = ['🔇', '🔉', '🔊']
@@ -428,7 +426,6 @@ export default function App() {
     setIsDead(false)
     setPaused(false)
     setShowCredits(false)
-    setEbUI(null)
     setOverlay({ zone: 0, text: DIALOGS[0] })
     // Close old AudioContext cleanly — new one created lazily on next dialog dismiss
     if (musicStopRef.current) { musicStopRef.current.stop(); musicStopRef.current = null }
@@ -437,9 +434,8 @@ export default function App() {
 
   const togglePause = useCallback(() => {
     const s = stateRef.current
-    if (s.dead) return
-    // During gameplay: toggle pause overlay; during credits: audio-only toggle
-    if (!s.won && !overlayRef.current) {
+    if (s.dead || s.won) return
+    if (!overlayRef.current) {
       pauseRef.current = !pauseRef.current
       setPaused(pauseRef.current)
     }
@@ -480,44 +476,6 @@ export default function App() {
     })
   }, [])
 
-  const attackElephant = useCallback(() => {
-    const s = stateRef.current
-    const eb = s.enemies.find(e => e.type === 'elephant' && e.hp > 0)
-    if (!eb) return
-    const dmg = s.hasLance ? 2 : 1
-    eb.hp = Math.max(0, eb.hp - dmg)
-    addParticles(s.particles, eb.x, eb.y - 30, s.hasLance ? '#f5d020' : '#9b56e3')
-    if (eb.hp <= 0) {
-      // Win!
-      s.won = true
-      s.hasLance = false
-      setEbUI(null)
-      if (musicStopRef.current) { musicStopRef.current.stop(); musicStopRef.current = null }
-      if (audioRef.current) {
-        musicStopRef.current = startWinMusic(audioRef.current)
-        if (musicStopRef.current)
-          musicStopRef.current.master.gain.value = VOL_VALS[volIdx]
-      }
-      showOverlay({ zone: 5, text: DIALOGS[5] })
-    } else {
-      // Elephant counter-attacks
-      s.hp = Math.max(0, s.hp - 1)
-      s.panic = Math.min(100, s.panic + 8)
-      s.inv = 50
-      s.hasLance = false
-      const mp = s.mp
-      setEbUI({ ebHp: eb.hp, total: eb.maxHp, mp, resistance: false })
-    }
-  }, [showOverlay, volIdx])
-
-  const rememberMarta = useCallback(() => {
-    const s = stateRef.current
-    const eb = s.enemies.find(e => e.type === 'elephant' && e.hp > 0)
-    if (!eb || s.mp < 10) return
-    s.mp -= 10
-    s.hasLance = true
-    setEbUI({ ebHp: eb.hp, total: eb.maxHp, mp: s.mp, resistance: true })
-  }, [])
   useEffect(() => {
     const canvas = canvasRef.current
     const ctx    = canvas.getContext('2d')
@@ -541,7 +499,6 @@ export default function App() {
         overlayRef.current = true
         stateRef.current = mkState()
         setIsDead(false)
-        setEbUI(null)
         setOverlay({ zone: 0, text: DIALOGS[0] })
       }
     }
@@ -597,7 +554,7 @@ export default function App() {
           s.zone = next
           s.enemies = spawnZone(next)
           s.px = 60; s.py = GROUND; s.pvx = 0; s.pvy = 0; s.camX = 0
-          s.roses = 0; s.hasLance = false; s.ebShown = false
+          s.roses = 0
           s.marta = next === 4 ? { x: ZONES[4].len - 80, y: GROUND, f: 0, met: false }
                   : next === 5 ? { x: 120, y: GROUND, f: 0, met: false }
                   : null
@@ -664,46 +621,32 @@ export default function App() {
           if (e.inv > 0) e.inv--
           const dx = s.px - e.x
           if (e.hp > 0) {
-            // Drift slowly toward player
             if (Math.abs(dx) > 60) e.x += dx > 0 ? 0.5 : -0.5
-            // Reveal eb panel when player gets close (only once per approach)
-            if (!s.ebShown && Math.abs(dx) < 120) {
-              s.ebShown = true
-              setEbUI({ ebHp: e.hp, total: e.maxHp, mp: s.mp, resistance: s.hasLance })
-            }
-            // Direct sword hit (canvas-based attack also works)
             if (s.atk > 0 && e.inv <= 0) {
               const inRange = Math.abs(s.px - e.x) < 44 && Math.abs(s.py - e.y) < 56
               const correct = (s.facing === 1 && e.x > s.px - 12) || (s.facing === -1 && e.x < s.px + 12)
               if (inRange && correct) {
-                const dmg = s.hasLance ? 2 : 1
-                e.hp = Math.max(0, e.hp - dmg)
+                e.hp = Math.max(0, e.hp - 1)
                 e.inv = 35
-                addParticles(s.particles, e.x, e.y - 30, s.hasLance ? '#f5d020' : '#9b56e3')
-                s.hasLance = false
+                addParticles(s.particles, e.x, e.y - 30, '#9b56e3')
                 if (e.hp <= 0) {
                   s.won = true
-                  setEbUI(null)
                   if (musicStopRef.current) { musicStopRef.current.stop(); musicStopRef.current = null }
                   const newMusic = startWinMusic(audioRef.current)
                   musicStopRef.current = newMusic
                   if (newMusic) newMusic.master.gain.value = VOL_VALS[volIdx]
                   showOverlay({ zone: 5, text: DIALOGS[5] })
-                } else {
-                  setEbUI({ ebHp: e.hp, total: e.maxHp, mp: s.mp, resistance: false })
                 }
               }
             }
-            // Body collision damage
             if (s.inv <= 0 && Math.abs(s.px - e.x) < 24 && s.py > e.y - 40) {
               s.hp = Math.max(0, s.hp - 1); s.panic = Math.min(100, s.panic + 10)
               s.inv = 70; s.pvx = (s.px > e.x ? 1 : -1) * 4; s.pvy = -4
             }
           }
-        }
+        } else if (e.type === 'rose') {
           if (!e.got && Math.abs(s.px - e.x) < 16 && Math.abs(s.py - e.y) < 20) {
             e.got = true; s.roses++
-            s.mp = Math.min(s.maxMp, s.mp + 7)
             addParticles(s.particles, e.x, e.y, '#ff90b3')
           }
         }
@@ -881,16 +824,12 @@ export default function App() {
       ctx.fillStyle = '#fff'; ctx.fillText('VIDA', 5, 12)
 
       r(ctx, 4, 14, 62,  8, '#1a0d2e')
-      r(ctx, 5, 15, ~~(60 * s.mp / s.maxMp), 6, '#5684e3')
-      ctx.fillStyle = '#fff'; ctx.fillText('MEM.', 5, 22)
-
-      r(ctx, 4, 24, 62,  8, '#1a0d2e')
-      r(ctx, 5, 25, ~~(60 * s.panic / 100), 6, s.panic > 60 ? '#e35656' : '#e3a056')
-      ctx.fillStyle = '#fff'; ctx.fillText('MIEDO', 5, 32)
+      r(ctx, 5, 15, ~~(60 * s.panic / 100), 6, s.panic > 60 ? '#e35656' : '#e3a056')
+      ctx.fillStyle = '#fff'; ctx.fillText('MIEDO', 5, 22)
 
       // Bar legend
       ctx.fillStyle = '#ffffff40'; ctx.font = '5px monospace'
-      ctx.fillText('vida · memoria · miedo', 4, 40)
+      ctx.fillText('vida · miedo', 4, 30)
       ctx.font = '6px monospace'
 
       ctx.fillStyle = '#ffffff88'; ctx.textAlign = 'right'
@@ -1051,31 +990,6 @@ export default function App() {
           </div>
         )}
       </div>
-
-      {ebUI && !overlay && (
-        <div className="eb-panel">
-          <div className="eb-title">🐘 Elefante Guardián</div>
-          <div className="eb-row">
-            <span>HP</span>
-            <div className="bar-track"><div className="bar-fill bar-enemy" style={{ width: `${(ebUI.ebHp / ebUI.total) * 100}%` }} /></div>
-            <span className="bar-val">{ebUI.ebHp}/{ebUI.total}</span>
-          </div>
-          <div className="eb-row">
-            <span>MP</span>
-            <div className="bar-track"><div className="bar-fill bar-mp" style={{ width: `${(ebUI.mp / 50) * 100}%` }} /></div>
-            <span className="bar-val">{ebUI.mp}/50</span>
-          </div>
-          {ebUI.resistance && <div className="eb-buff">🌹 Marta te ha dado su lanza — ¡ataca ahora!</div>}
-          <div className="eb-actions">
-            <button type="button" className="eb-btn" onClick={attackElephant} disabled={ebUI.ebHp <= 0}>
-              {ebUI.resistance ? '⚔️ Atacar con la lanza de Marta' : '👊 Atacar a manos vacías'}
-            </button>
-            <button type="button" className="eb-btn eb-marta" onClick={rememberMarta} disabled={ebUI.mp < 10 || ebUI.ebHp <= 0 || ebUI.resistance}>
-              🌹 Pedir la lanza a Marta
-            </button>
-          </div>
-        </div>
-      )}
 
       <div className="touch-controls">
         <div className="touch-dpad">
