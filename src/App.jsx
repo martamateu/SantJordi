@@ -457,6 +457,21 @@ export default function App() {
     }
   }, [])
 
+  // Auto-fullscreen on mobile landscape rotation
+  useEffect(() => {
+    function onOrientationChange() {
+      const landscape = window.matchMedia('(orientation: landscape)').matches
+      if (landscape && !document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {})
+      }
+    }
+    const mq = window.matchMedia('(orientation: landscape)')
+    mq.addEventListener('change', onOrientationChange)
+    // Trigger immediately if already landscape on mount
+    onOrientationChange()
+    return () => mq.removeEventListener('change', onOrientationChange)
+  }, [])
+
   const toggleVolume = useCallback(() => {
     setVolIdx(prev => {
       const next = (prev + 1) % 3
