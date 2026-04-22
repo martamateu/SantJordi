@@ -231,32 +231,31 @@ body {
 
 .touch-utils {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  flex-direction: row;
+  gap: 0.3rem;
   align-items: center;
 }
 .tbtn-pause,
 .tbtn-util {
-  width: 42px;
-  height: 42px;
-  font-size: 1rem;
+  width: 40px;
+  height: 40px;
+  font-size: 0.95rem;
   border-color: #c8a040;
   opacity: 0.75;
 }
-.tbtn-pause { font-size: 1.1rem; }
 .tbtn-pause:active,
 .tbtn-util:active  { opacity: 1; }
 
-/* Landscape: smaller buttons so canvas gets more vertical space */
+/* Landscape mobile: shrink everything so canvas + controls fit in 100dvh */
 @media (orientation: landscape) and (max-height: 500px) {
-  .tbtn            { width: 54px; height: 54px; font-size: 1.3rem; }
-  .tbtn-pause,
-  .tbtn-util       { width: 36px; height: 36px; font-size: 0.85rem; }
-  .touch-controls  {
-    max-width: min(100vw, calc((100dvh - 68px) * 16 / 9));
-    padding: 0.2rem 0.5rem;
+  .canvas-wrap    { max-width: min(100vw, calc((100dvh - 62px) * 16 / 9)); }
+  .touch-controls {
+    max-width: min(100vw, calc((100dvh - 62px) * 16 / 9));
+    padding: 0.15rem 0.5rem;
   }
-  .canvas-wrap     { max-width: min(100vw, calc((100dvh - 68px) * 16 / 9)); }
+  .tbtn           { width: 50px; height: 50px; font-size: 1.15rem; }
+  .tbtn-pause,
+  .tbtn-util      { width: 32px; height: 32px; font-size: 0.8rem; }
 }
 
 /* Hide touch controls on non-touch desktop */
