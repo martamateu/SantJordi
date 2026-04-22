@@ -434,14 +434,10 @@ export default function App() {
 
   const togglePause = useCallback(() => {
     const s = stateRef.current
-    if (s.dead || s.won) return
+    if (s.dead) return
     if (!overlayRef.current) {
       pauseRef.current = !pauseRef.current
       setPaused(pauseRef.current)
-    }
-    if (audioRef.current) {
-      if (audioRef.current.state === 'running') audioRef.current.suspend()
-      else                                       audioRef.current.resume()
     }
   }, [])
 
@@ -486,13 +482,9 @@ export default function App() {
       keysRef.current[e.code] = true
       if ((e.code === 'KeyP' || e.code === 'Escape') && !stateRef.current.dead) {
         const s = stateRef.current
-        if (!s.won && !overlayRef.current) {
+        if (!overlayRef.current) {
           pauseRef.current = !pauseRef.current
           setPaused(pauseRef.current)
-        }
-        if (audioRef.current) {
-          if (audioRef.current.state === 'running') audioRef.current.suspend()
-          else                                       audioRef.current.resume()
         }
       }
       if (e.code === 'KeyR' && stateRef.current.dead) {
@@ -935,16 +927,16 @@ export default function App() {
 
         {showCredits && (
           <div className="credits-overlay" onClick={restart}>
-            <div className="credits-scroll">
+            <div className="credits-scroll" style={{ animationPlayState: paused ? 'paused' : 'running' }}>
               <div className="credits-title">Más Allá del Dragón</div>
-              <div className="credits-subtitle">Sant Jordi — 23 de abril, Barcelona</div>
+              <div className="credits-subtitle">Sant Jordi — 23 de abril de 2026, Barcelona</div>
 
               <div className="credits-section">Dirección creativa</div>
               <div className="credits-body">Una historia sobre el viaje hacia dentro.</div>
 
               <div className="credits-section">Narrativa</div>
               <div className="credits-body">
-                Un hombre sale a buscar a la persona que ama…{'\n'}
+                Víctor sale a buscar a la persona que ama…{'\n'}
                 pero descubre que nunca estuvo realmente lejos.{'\n\n'}
                 El mayor obstáculo no era el camino,{'\n'}
                 ni el bosque, ni las ruinas,{'\n'}
