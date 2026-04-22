@@ -228,6 +228,8 @@ body {
 .tbtn-jump:active { background: rgba(60, 100, 220, 0.99); }
 .tbtn-atk         { background: rgba(160, 20, 20, 0.95);  border-color: #e35656; box-shadow: 0 0 10px rgba(227, 86, 86, 0.4); }
 .tbtn-atk:active  { background: rgba(220, 50, 50, 0.99); }
+.tbtn-pause       { width: 44px; height: 44px; font-size: 1.1rem; border-color: #c8a040; align-self: center; opacity: 0.7; }
+.tbtn-pause:active { opacity: 1; }
 
 /* Hide touch controls on non-touch desktop (optional — comment out to keep always visible) */
 @media (hover: hover) and (pointer: fine) {

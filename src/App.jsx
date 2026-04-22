@@ -272,12 +272,14 @@ export default function App() {
   const keysRef     = useRef({})
   const touchRef    = useRef({ left: false, right: false, jump: false, attack: false })
   const overlayRef  = useRef(true)
-  const audioRef    = useRef(null)    // AudioContext
-  const musicStopRef= useRef(null)    // cleanup fn
+  const pauseRef    = useRef(false)
+  const audioRef    = useRef(null)
+  const musicStopRef= useRef(null)
 
   const [overlay, setOverlay]   = useState({ zone: 0, text: DIALOGS[0] })
   const [ebUI,    setEbUI]      = useState(null)
   const [isDead,  setIsDead]    = useState(false)
+  const [paused,  setPaused]    = useState(false)
 
   const showOverlay = useCallback((data) => {
     overlayRef.current = !!data
@@ -299,13 +301,26 @@ export default function App() {
 
   const restart = useCallback(() => {
     overlayRef.current = true
+    pauseRef.current   = false
     stateRef.current = mkState()
     setIsDead(false)
+    setPaused(false)
     setEbUI(null)
     setOverlay({ zone: 0, text: DIALOGS[0] })
-    // Re-start music scheduler (AudioContext already exists)
     if (musicStopRef.current) musicStopRef.current()
     if (audioRef.current) musicStopRef.current = startMusic(audioRef.current)
+  }, [])
+
+  const togglePause = useCallback(() => {
+    const s = stateRef.current
+    if (s.won || s.dead || overlayRef.current) return
+    pauseRef.current = !pauseRef.current
+    setPaused(pauseRef.current)
+    // Suspend / resume AudioContext
+    if (audioRef.current) {
+      if (pauseRef.current) audioRef.current.suspend()
+      else                  audioRef.current.resume()
+    }
   }, [])
 
   const attackElephant = useCallback(() => {
@@ -342,6 +357,17 @@ export default function App() {
 
     const onKeyDown = (e) => {
       keysRef.current[e.code] = true
+      if ((e.code === 'KeyP' || e.code === 'Escape') && !stateRef.current.dead) {
+        const s = stateRef.current
+        if (!s.won && !overlayRef.current) {
+          pauseRef.current = !pauseRef.current
+          setPaused(pauseRef.current)
+          if (audioRef.current) {
+            if (pauseRef.current) audioRef.current.suspend()
+            else                  audioRef.current.resume()
+          }
+        }
+      }
       if (e.code === 'KeyR' && stateRef.current.dead) {
         overlayRef.current = true
         stateRef.current = mkState()
@@ -362,7 +388,7 @@ export default function App() {
       const t    = touchRef.current
       s.f++
 
-      if (s.won || s.dead || overlayRef.current) return
+      if (s.won || s.dead || overlayRef.current || pauseRef.current) return
 
       // Elephant boss uses React UI — freeze platformer controls
       const elboss = s.enemies.find(e => e.type === 'elephant')
@@ -652,6 +678,18 @@ export default function App() {
         ctx.textAlign = 'left'
       }
 
+      // ── Pause screen ─────────────────────────────────
+      if (pauseRef.current) {
+        ctx.fillStyle = 'rgba(4,1,20,0.72)'
+        ctx.fillRect(0, 0, CW, CH)
+        ctx.textAlign = 'center'
+        ctx.fillStyle = '#c8a040'; ctx.font = 'bold 20px monospace'
+        ctx.fillText('PAUSA', CW / 2, CH / 2 - 8)
+        ctx.fillStyle = '#7a6030'; ctx.font = '6px monospace'
+        ctx.fillText('P · ESC  para continuar', CW / 2, CH / 2 + 8)
+        ctx.textAlign = 'left'
+      }
+
       // ── Game over screen ──────────────────────────────
       if (s.dead) {
         ctx.fillStyle = 'rgba(0,0,0,0.78)'
@@ -753,6 +791,7 @@ export default function App() {
           <button className="tbtn" onPointerDown={() => tb('left',  true)} onPointerUp={() => tb('left',  false)} onPointerLeave={() => tb('left',  false)}>◀</button>
           <button className="tbtn" onPointerDown={() => tb('right', true)} onPointerUp={() => tb('right', false)} onPointerLeave={() => tb('right', false)}>▶</button>
         </div>
+        <button className="tbtn tbtn-pause" onClick={togglePause}>{paused ? '▶' : '⏸'}</button>
         <div className="touch-btns">
           <button className="tbtn tbtn-jump"  onPointerDown={() => tb('jump',   true)} onPointerUp={() => tb('jump',   false)} onPointerLeave={() => tb('jump',   false)}>↑</button>
           <button className="tbtn tbtn-atk"   onPointerDown={() => tb('attack', true)} onPointerUp={() => tb('attack', false)} onPointerLeave={() => tb('attack', false)}>⚔</button>
