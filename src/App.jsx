@@ -69,7 +69,77 @@ function startMusic(ac) {
   return { stop: () => clearInterval(id), master }
 }
 
-// Logical game size (all coordinates use this)
+// ── 8-bit win/credits music ───────────────────────────────
+function startWinMusic(ac) {
+  const master = ac.createGain()
+  master.gain.value = 0.8
+  master.connect(ac.destination)
+
+  const B = 60 / 108   // D major triumphant, 108 BPM
+
+  const MEL = [
+    [294,1],[370,1],[440,1],[587,1],
+    [587,1.5],[523,0.5],[440,1],[370,1],
+    [440,2],[370,1],[294,1],
+    [392,1],[523,1],[659,1],[784,1],
+    [784,1.5],[659,0.5],[587,1],[440,1],
+    [587,3],[0,1],
+    [440,1],[523,1],[587,1],[659,1],[784,1],[880,3],[0,1],
+    [587,1],[440,1],[370,1],[294,3],
+  ]
+  const BAS = [
+    [147,2],[220,2],[110,2],[196,2],
+    [147,2],[165,2],[131,2],[110,2],
+    [147,2],[220,2],[147,2],[196,2],
+    [110,2],[147,2],[110,4],
+  ]
+  const LOOP = MEL.reduce((s, [,b]) => s + b, 0) * B
+
+  function note(freq, dur, t, type, vol) {
+    if (freq <= 1) return
+    const o = ac.createOscillator(), g = ac.createGain()
+    o.connect(g); g.connect(master)
+    o.type = type; o.frequency.value = freq
+    g.gain.setValueAtTime(vol, t)
+    g.gain.exponentialRampToValueAtTime(0.001, t + Math.max(dur * 0.85, 0.02))
+    o.start(t); o.stop(t + dur + 0.02)
+  }
+
+  let mt = ac.currentTime + 0.06
+  let bt = ac.currentTime + 0.06
+  let ht = ac.currentTime + 0.06
+  const AHEAD = 3
+
+  function sched() {
+    const now = ac.currentTime
+    while (mt < now + AHEAD) {
+      for (const [f, b] of MEL) {
+        note(f,   b*B*0.85, mt, 'square',   0.07)
+        note(f/2, b*B*0.55, mt, 'triangle', 0.04)
+        mt += b*B
+      }
+    }
+    while (bt < now + AHEAD) {
+      for (const [f, b] of BAS) {
+        note(f, b*B*0.70, bt, 'sawtooth', 0.08)
+        bt += b*B
+      }
+    }
+    while (ht < now + AHEAD) {
+      const steps = Math.round(LOOP / (B / 2))
+      for (let i = 0; i < steps; i++) {
+        if (i % 2 === 0) note(880, 0.04, ht + i * (B / 2), 'square', 0.018)
+      }
+      ht += LOOP
+    }
+  }
+
+  sched()
+  const id = setInterval(sched, 1000)
+  return { stop: () => clearInterval(id), master }
+}
+
+
 const CW = 320
 const CH = 180
 const SCALE = 2          // canvas pixels per logical pixel → 640×360
@@ -101,7 +171,7 @@ function spawnZone(zone) {
       e.push({ type: 'blob', x: 300 + i * 160, y: GROUND, vx: -0.8, vy: 0, hp: 2, maxHp: 2, f: i * 12, jumper: false, jt: 0 })
   } else if (zone === 1) {
     for (let i = 0; i < 4; i++)
-      e.push({ type: 'blob', x: 280 + i * 140, y: GROUND, vx: -1, vy: 0, hp: 2, maxHp: 2, f: i * 8, jumper: true, jt: i * 40 + 50 })
+      e.push({ type: 'pelephant', x: 280 + i * 140, y: GROUND, vx: -1, vy: 0, hp: 2, maxHp: 2, f: i * 8, jumper: true, jt: i * 40 + 50 })
   } else if (zone === 2) {
     for (let i = 0; i < 6; i++)
       e.push({ type: 'rock', x: 150 + i * 75, y: 0, vy: 0, hp: 1, maxHp: 1, f: 0, delay: 50 + i * 55 })
@@ -180,6 +250,22 @@ function drawBlob(ctx, x, y, f) {
   r(ctx, x + 2, y - 17 + b,  2,  2, '#ff80ff')
   r(ctx, x - 9, y -  6,      4,  4, '#8a2090')
   r(ctx, x + 5, y -  6,      4,  4, '#8a2090')
+}
+
+function drawPinkElephant(ctx, x, y, f) {
+  const b = ~~(Math.sin(f * 0.12) * 2)
+  r(ctx, x - 10, y - 18 + b, 20, 14, '#d878a8') // body
+  r(ctx, x -  8, y - 12 + b, 16, 10, '#e898c0') // belly
+  r(ctx, x +  4, y - 24 + b, 16, 16, '#d878a8') // head
+  r(ctx, x + 12, y - 28 + b, 10, 14, '#e898c0') // ear
+  r(ctx, x + 14, y - 26 + b,  5,  8, '#f0b0d0') // ear inner
+  r(ctx, x +  8, y - 22 + b,  4,  4, '#f0b0d0') // eye area
+  r(ctx, x +  9, y - 21 + b,  2,  2, '#1a0d2e') // pupil
+  r(ctx, x +  6, y - 16 + b,  4,  6, '#d060a0') // trunk
+  r(ctx, x +  4, y - 10 + b,  4,  4, '#b84090') // trunk tip
+  r(ctx, x -  8, y -  4,      5,  6, '#c060a0') // leg l
+  r(ctx, x -  2, y -  4,      5,  6, '#c060a0') // leg m
+  r(ctx, x +  8, y -  4,      5,  6, '#c060a0') // leg r
 }
 
 function drawRock(ctx, x, y) {
@@ -380,25 +466,26 @@ export default function App() {
     const s = stateRef.current
     const enm = s.enemies.find(e => e.type === 'elephant')
     if (!enm || enm.hp <= 0) return
-    const res = s.ebResistance
-    enm.hp = Math.max(0, enm.hp - (res ? 2 : 1))
-    s.hp    = Math.max(0, s.hp - (res ? 1 : 2))
-    s.panic = Math.min(100, s.panic + (res ? 4 : 8))
+    const hasLance = s.ebResistance
+    enm.hp = Math.max(0, enm.hp - (hasLance ? 3 : 1))
+    s.hp    = Math.max(0, s.hp   - (hasLance ? 0 : 2))
+    s.panic = Math.min(100, s.panic + (hasLance ? 0 : 10))
     s.ebResistance = false
     if (enm.hp <= 0) {
       s.won = true
-      setTimeout(() => showOverlay({ zone: 5, text: DIALOGS[5] }), 400)
+      // Switch to win music
+      if (musicStopRef.current) { musicStopRef.current.stop(); musicStopRef.current = null }
+      if (audioRef.current) musicStopRef.current = startWinMusic(audioRef.current)
+      setTimeout(() => setShowCredits(true), 800)
     }
     setEbUI(u => ({ ...u, ebHp: enm.hp, mp: s.mp, resistance: false }))
-  }, [showOverlay])
+  }, [])
 
   const rememberMarta = useCallback(() => {
     const s = stateRef.current
     if (s.mp < 10) return
-    s.mp  -= 10
-    s.panic = Math.max(0, s.panic - 20)
-    s.hp    = Math.max(0, s.hp - 1)
-    s.ebResistance = true
+    s.mp -= 10
+    s.ebResistance = true   // Marta gives Victor her lance
     setEbUI(u => ({ ...u, mp: s.mp, resistance: true }))
   }, [])
 
@@ -504,7 +591,7 @@ export default function App() {
       // ── Enemy update ──────────────────────────────────
       for (const e of s.enemies) {
         e.f++
-        if (e.type === 'blob') {
+        if (e.type === 'blob' || e.type === 'pelephant') {
           e.x += e.vx
           if (e.jumper) {
             e.jt--
@@ -693,7 +780,8 @@ export default function App() {
       for (const e of s.enemies) {
         const sx = e.x - s.camX
         if (sx < -90 || sx > CW + 90) continue
-        if      (e.type === 'blob'     )                drawBlob(ctx, sx, e.y, e.f)
+        if      (e.type === 'blob'      )                drawBlob(ctx, sx, e.y, e.f)
+        else if (e.type === 'pelephant' )                drawPinkElephant(ctx, sx, e.y, e.f)
         else if (e.type === 'rock'     && e.delay <= 0) drawRock(ctx, sx, e.y)
         else if (e.type === 'dragon'   && e.hp > 0)     drawDragon(ctx, sx, e.y, e.hp, e.maxHp, e.f)
         else if (e.type === 'rose'     && !e.got)       drawRose(ctx, sx, e.y)
@@ -908,7 +996,7 @@ export default function App() {
 
       {ebUI && !overlay && (
         <div className="eb-panel">
-          <div className="eb-title">⚔ Elefante Guardián</div>
+          <div className="eb-title">🐘 Elefante Guardián</div>
           <div className="eb-row">
             <span>HP</span>
             <div className="bar-track"><div className="bar-fill bar-enemy" style={{ width: `${(ebUI.ebHp / ebUI.total) * 100}%` }} /></div>
@@ -919,13 +1007,13 @@ export default function App() {
             <div className="bar-track"><div className="bar-fill bar-mp" style={{ width: `${(ebUI.mp / 50) * 100}%` }} /></div>
             <span className="bar-val">{ebUI.mp}/50</span>
           </div>
-          {ebUI.resistance && <div className="eb-buff">⚡ Resistencia activa — próximo golpe +dmg</div>}
+          {ebUI.resistance && <div className="eb-buff">🌹 Marta te ha dado su lanza — ¡ataca ahora!</div>}
           <div className="eb-actions">
             <button type="button" className="eb-btn" onClick={attackElephant} disabled={ebUI.ebHp <= 0}>
-              Golpe valiente
+              {ebUI.resistance ? '⚔️ Atacar con la lanza de Marta' : '👊 Atacar a manos vacías'}
             </button>
-            <button type="button" className="eb-btn eb-marta" onClick={rememberMarta} disabled={ebUI.mp < 10 || ebUI.ebHp <= 0}>
-              ❤️ Recordar a Marta
+            <button type="button" className="eb-btn eb-marta" onClick={rememberMarta} disabled={ebUI.mp < 10 || ebUI.ebHp <= 0 || ebUI.resistance}>
+              🌹 Pedir la lanza a Marta
             </button>
           </div>
         </div>
