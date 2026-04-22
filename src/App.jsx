@@ -439,6 +439,10 @@ export default function App() {
       setPaused(pauseRef.current)
       if (creditsScrollRef.current)
         creditsScrollRef.current.style.animationPlayState = pauseRef.current ? 'paused' : 'running'
+      if (audioRef.current) {
+        if (pauseRef.current) audioRef.current.suspend()
+        else                  audioRef.current.resume()
+      }
     }
   }, [])
 
@@ -487,6 +491,10 @@ export default function App() {
           setPaused(pauseRef.current)
           if (creditsScrollRef.current)
             creditsScrollRef.current.style.animationPlayState = pauseRef.current ? 'paused' : 'running'
+          if (audioRef.current) {
+            if (pauseRef.current) audioRef.current.suspend()
+            else                  audioRef.current.resume()
+          }
         }
       }
       if (e.code === 'KeyR' && stateRef.current.dead) {
