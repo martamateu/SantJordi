@@ -144,12 +144,12 @@ const SCALE = 2          // canvas pixels per logical pixel → 640×360
 const GROUND = CH - 32
 
 const ZONES = [
-  { name: 'Ciudad',  bgTop: '#040214', bgBot: '#120840', gc: '#6650a0', len: 700 },
-  { name: 'Bosque',  bgTop: '#010f08', bgBot: '#063520', gc: '#1e5014', len: 700 },
-  { name: 'Ruinas',  bgTop: '#080714', bgBot: '#1a1428', gc: '#42325a', len: 520 },
-  { name: 'Dragón',  bgTop: '#140100', bgBot: '#380500', gc: '#8a1808', len: 480 },
-  { name: 'Jardín',  bgTop: '#011008', bgBot: '#053818', gc: '#225810', len: 600 },
-  { name: 'Final',   bgTop: '#040118', bgBot: '#160850', gc: '#4a2878', len: 480 },
+  { name: 'Barcelona', bgTop: '#040214', bgBot: '#120840', gc: '#6650a0', len: 700 },
+  { name: 'Bosque',    bgTop: '#010f08', bgBot: '#063520', gc: '#1e5014', len: 700 },
+  { name: 'Gym',       bgTop: '#080714', bgBot: '#1a1428', gc: '#42325a', len: 520 },
+  { name: 'Dragón',    bgTop: '#140100', bgBot: '#380500', gc: '#8a1808', len: 480 },
+  { name: 'Jardín',    bgTop: '#011008', bgBot: '#053818', gc: '#225810', len: 600 },
+  { name: 'Batalla Final', bgTop: '#040118', bgBot: '#160850', gc: '#4a2878', len: 480 },
 ]
 
 const DIALOGS = [
@@ -387,6 +387,7 @@ export default function App() {
   const pauseRef    = useRef(false)
   const audioRef    = useRef(null)
   const musicStopRef= useRef(null)
+  const volRef      = useRef(2)   // mirrors volIdx for use inside callbacks
 
   const [overlay, setOverlay]     = useState({ zone: 0, text: DIALOGS[0] })
   const [isDead,  setIsDead]      = useState(false)
@@ -439,6 +440,8 @@ export default function App() {
       setPaused(pauseRef.current)
       if (creditsScrollRef.current)
         creditsScrollRef.current.style.animationPlayState = pauseRef.current ? 'paused' : 'running'
+      if (musicStopRef.current)
+        musicStopRef.current.master.gain.value = pauseRef.current ? 0 : VOL_VALS[volRef.current]
       if (audioRef.current) {
         if (pauseRef.current) audioRef.current.suspend()
         else                  audioRef.current.resume()
@@ -472,7 +475,9 @@ export default function App() {
   const toggleVolume = useCallback(() => {
     setVolIdx(prev => {
       const next = (prev + 1) % 3
-      if (musicStopRef.current) musicStopRef.current.master.gain.value = [0, 0.4, 1.0][next]
+      volRef.current = next
+      if (musicStopRef.current && !pauseRef.current)
+        musicStopRef.current.master.gain.value = VOL_VALS[next]
       return next
     })
   }, [])
@@ -491,6 +496,8 @@ export default function App() {
           setPaused(pauseRef.current)
           if (creditsScrollRef.current)
             creditsScrollRef.current.style.animationPlayState = pauseRef.current ? 'paused' : 'running'
+          if (musicStopRef.current)
+            musicStopRef.current.master.gain.value = pauseRef.current ? 0 : VOL_VALS[volRef.current]
           if (audioRef.current) {
             if (pauseRef.current) audioRef.current.suspend()
             else                  audioRef.current.resume()
@@ -1000,7 +1007,7 @@ export default function App() {
         </div>
         <div className="touch-utils">
           <button className="tbtn tbtn-util" onClick={restart}>↺</button>
-          <button className="tbtn tbtn-util" onClick={toggleFullscreen}>⛶</button>
+          <button className="tbtn tbtn-util tbtn-fs" onClick={toggleFullscreen}>⛶</button>
           <button className="tbtn tbtn-pause" onClick={togglePause}>{paused ? '▶' : '⏸'}</button>
           <button className="tbtn tbtn-util" onClick={toggleVolume}>{VOL_ICONS[volIdx]}</button>
         </div>

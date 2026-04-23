@@ -248,6 +248,9 @@ body {
 .tbtn-pause:active,
 .tbtn-util:active  { opacity: 1; }
 
+/* Fullscreen button: hidden in portrait, visible in landscape */
+.tbtn-fs { display: none; }
+
 /* ── Landscape: side-by-side layout ─────────────────
    Canvas fills height on the left, controls column on the right */
 @media (orientation: landscape) {
@@ -288,6 +291,7 @@ body {
   .tbtn        { width: 66px; height: 56px; font-size: 1.35rem; }
   .tbtn-pause,
   .tbtn-util   { width: 54px; height: 40px; font-size: 1rem; opacity: 0.85; }
+  .tbtn-fs     { display: flex; }
 }
 
 /* Hide touch controls on non-touch desktop */
