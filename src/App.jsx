@@ -148,7 +148,7 @@ const ZONES = [
   { name: 'Bosque',    bgTop: '#010f08', bgBot: '#063520', gc: '#1e5014', len: 700 },
   { name: 'Ruinas',    bgTop: '#080714', bgBot: '#1a1428', gc: '#42325a', len: 520 },  { name: 'Dragón',    bgTop: '#140100', bgBot: '#380500', gc: '#8a1808', len: 480 },
   { name: 'Jardín',    bgTop: '#011008', bgBot: '#053818', gc: '#225810', len: 600 },
-  { name: 'Batalla Final', bgTop: '#040118', bgBot: '#160850', gc: '#4a2878', len: 480 },
+  { name: 'Final',        bgTop: '#040118', bgBot: '#160850', gc: '#4a2878', len: 480 },
 ]
 
 const DIALOGS = [
@@ -841,7 +841,8 @@ export default function App() {
       ctx.font = '6px monospace'
 
       ctx.fillStyle = '#ffffff88'; ctx.textAlign = 'right'
-      ctx.fillText(z.name.toUpperCase(), CW - 4, 12)
+      const hudZoneName = (s.zone === 5 && !s.won) ? 'Batalla Final' : z.name
+      ctx.fillText(hudZoneName.toUpperCase(), CW - 4, 12)
       if (s.zone === 4) ctx.fillText(`🌹 ${s.roses}/5`, CW - 4, 22)
       ctx.textAlign = 'left'
 
