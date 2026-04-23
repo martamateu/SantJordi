@@ -67,7 +67,7 @@ function startMusic(ac) {
   sched()
   const id = setInterval(sched, 1000)
   return { stop: () => { clearInterval(id); master.disconnect() }, master }
-} — epic march ─────────────────
+} // ── 8-bit win/credits music — epic march ─────────────────
 function startWinMusic(ac) {
   const master = ac.createGain()
   master.gain.value = 0.8
